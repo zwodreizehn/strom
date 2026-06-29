@@ -5,6 +5,8 @@ Terminal-Tool – htop-artige Bedienung in IBM-3270-Phosphor-Optik, optional mit
 **Tibber-Marktpreisen**, **Zählerstand-Commit** (Opt-in + 2FA) und einem
 **Web-Export** (HTML/PHP) inklusive Ampel-Empfehlung fürs Handy.
 
+![strom Live-Dashboard](docs/dashboard.png)
+
 Nur Python-Standardbibliothek – keine Pakete nötig. Die Live-Werte kommen über
 die inexogy-REST-API (HTTP Basic Auth); ein Hintergrund-Thread pollt den Zähler,
 die curses-Oberfläche bleibt flüssig und blockiert nie auf dem Netz.
