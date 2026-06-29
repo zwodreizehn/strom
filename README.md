@@ -1,7 +1,7 @@
 # strom
 
 **Live-Dashboard für Smartmeter** (inexogy / vormals Discovergy) als
-Terminal-Tool – htop-artige Bedienung in IBM-3270-Phosphor-Optik, optional mit
+Terminal-Tool – optional mit
 **Tibber-Marktpreisen**, **Zählerstand-Commit** (Opt-in + 2FA) und einem
 **Web-Export** (HTML/PHP) inklusive Ampel-Empfehlung fürs Handy.
 
@@ -25,6 +25,8 @@ die curses-Oberfläche bleibt flüssig und blockiert nie auf dem Netz.
 - Optional: **[himalaya](https://github.com/pimalaya/himalaya)** CLI für den
   2FA-Mailversand beim Zählerstand-Commit.
 - Optional: ein **Webspace/Server mit PHP** für den Handy-Export.
+
+![Beisp. PHP export](docs/strom-php.png)
 
 ## Installation
 
