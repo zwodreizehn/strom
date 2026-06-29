@@ -1,0 +1,195 @@
+.\" Man page für strom – Live-Stromzähler-Dashboard (inexogy / Tibber)
+.TH STROM 1 "2026-06-29" "strom 2.0" "strom – Stromzähler-Dashboard"
+.SH NAME
+strom \- Live\-Dashboard für den inexogy\- (vormals Discovergy\-) Stromzähler
+.SH ÜBERSICHT
+.SY strom
+.OP Befehl
+.OP Argumente
+.YS
+.SH BESCHREIBUNG
+.B strom
+ist ein Terminal\-Werkzeug, das die Live\-Werte eines inexogy\-Smartmeters über
+die inexogy\-REST\-API (HTTP Basic Auth) abruft und in htop\-artiger Bedienung mit
+IBM\-3270\-Phosphor\-Optik anzeigt. Ein Hintergrund\-Thread pollt den Zähler, die
+curses\-Oberfläche bleibt dabei flüssig.
+.PP
+Ohne Befehl startet das interaktive Live\-Dashboard (nur auf einem TTY; sonst
+wird eine einmalige Klartext\-Momentaufnahme ausgegeben). Optional bindet
+.B strom
+die Tibber\-Marktpreise ein, kann den Zählerstand an Tibber senden
+(abgesichert per Opt\-in und 2FA) und eine handy\-taugliche HTML/PHP\-Seite
+für den Web\-Export schreiben.
+.PP
+Es wird ausschließlich die Python\-Standardbibliothek verwendet; keine externen
+Pakete nötig (außer optional dem
+.B himalaya\-CLI
+für den 2FA\-Mailversand).
+.SH BEFEHLE
+.TP
+.B strom
+Interaktives Live\-Dashboard (TUI). Tasten:
+.B R
+sofort aktualisieren,
+.B M
+Markt\-/Preistabelle,
+.B C
+Zählerstand an Tibber senden,
+.B K
+khal\-Infos,
+.B Q
+beenden.
+.TP
+.B strom now
+Einmalige Momentaufnahme als Klartext (auch für Pipes/Logs).
+.TP
+.BI "strom watch " [SEK]
+Momentaufnahme alle \fISEK\fR Sekunden (Default 5); der Bildschirm wird gelöscht.
+.TP
+.B strom markt
+Tibber\-Marktpreise für heute als Klartext\-Tabelle.
+.TP
+.BI "strom export " [PFAD]
+Schreibt eine in sich geschlossene HTML/PHP\-Seite (Leistung, Tagesverbrauch,
+Zählerstände, Tibber\-Preise und eine Ampel\-Empfehlung) atomar nach \fIPFAD\fR.
+Ohne Argument an den in \fIexport_path\fR konfigurierten Ort (Default
+.IR ~/strom.php ).
+Nicht\-interaktiv, damit cron\-tauglich. Kein Schreibzugriff auf Tibber.
+.TP
+.B strom setup
+Startet den interaktiven Einrichtungs\-Assistenten und legt die Konfiguration
+neu an. Läuft beim allerersten Start (fehlende Konfiguration) automatisch.
+.TP
+.B strom commit
+Sendet den aktuellen Zählerstand an Tibber. Schreibender, abrechnungsrelevanter
+Eingriff \(en doppelt abgesichert (Opt\-in + manuelle Wertbestätigung + 2FA per
+E\-Mail\-Code). Siehe
+.BR ABSICHERUNG .
+.TP
+.B strom meters
+Listet alle Zähler des Kontos auf.
+.TP
+.B strom test
+Prüft Verbindung/Login und holt einen Wert.
+.TP
+.BR "strom version" ", " "strom help"
+Version bzw. Kurzhilfe.
+.SH KONFIGURATION
+Zugangsdaten und Einstellungen liegen in
+.I ~/.config/strom/config
+(Modus 600, Format \fBKEY=WERT\fR je Zeile). Umgebungsvariablen haben Vorrang.
+.TP
+.B email
+inexogy\-Login (Pflicht).
+.TP
+.B password
+inexogy\-Passwort (Pflicht).
+.TP
+.B meter_id
+Zähler\-ID (optional, wird sonst automatisch ermittelt).
+.TP
+.B interval
+Sekunden zwischen Live\-Abfragen (Default 2).
+.TP
+.B chart_height
+Zeilenhöhe der Charts (0 = automatisch ~90 % Restplatz).
+.TP
+.B tibber_token
+Developer\-Token von developer.tibber.com (bevorzugt).
+.TP
+.BR tibber_email ", " tibber_password
+Tibber\-Login als Fallback statt Token (App\-Login).
+.TP
+.B tibber_home
+appNickname\-Teil oder Index, sonst erstes Home.
+.TP
+.B tibber_commit
+\fBon\fR schaltet den Zählerstand\-Commit frei (Default aus).
+.TP
+.B commit_email
+Ziel des 2FA\-Codes (Default: email).
+.TP
+.B brand
+Label oben links in der Statusleiste (Whitelabel; Default \fIIBM 3270 ▐ STROM\fR).
+.TP
+.B export_path
+Ziel von \fBstrom export\fR (Default \fI~/strom.php\fR).
+.TP
+.B mail_from
+Absender des 2FA\-Codes für \fBhimalaya\fR (Default: commit_email).
+.SH UMGEBUNGSVARIABLEN
+.TP
+.B STROM_CONFIG_DIR
+Alternatives Konfigverzeichnis (Default \fI~/.config/strom\fR).
+.TP
+.BR STROM_EMAIL ", " STROM_PASSWORD ", " STROM_METER ", " STROM_INTERVAL
+Überschreiben die gleichnamigen Konfig\-Schlüssel.
+.TP
+.BR STROM_TIBBER_TOKEN ", " STROM_TIBBER_EMAIL ", " STROM_TIBBER_PASSWORD ", " STROM_TIBBER_HOME
+Tibber\-Zugang per Umgebung.
+.TP
+.BR STROM_TIBBER_COMMIT ", " STROM_COMMIT_EMAIL
+Commit\-Opt\-in bzw. 2FA\-Ziel.
+.TP
+.B STROM_EXPORT_PATH
+Zielpfad für \fBstrom export\fR / \fBtimed_export.sh\fR.
+.TP
+.B STROM_MAIL_FROM
+Absenderadresse des 2FA\-Codes (sonst \fImail_from\fR aus der config,
+Default = \fIcommit_email\fR).
+.SH DATEIEN
+.TP
+.I ~/.config/strom/config
+Zugangsdaten und Einstellungen (Modus 600).
+.TP
+.I ~/.config/strom/tibber_token.json
+Gecachter Tibber\-JWT beim App\-Login (Modus 600).
+.TP
+.I ~/strom.php
+Standard\-Ziel des Web\-Exports (per \fIexport_path\fR bzw. \fB$STROM_EXPORT_PATH\fR
+änderbar, z. B. auf einen gemounteten Webspace).
+.SH ABSICHERUNG
+Das Senden eines Zählerstands an Tibber ist dreifach gesichert:
+.IP 1. 4
+\fBOpt\-in\fR: nur aktiv mit \fItibber_commit=on\fR in der config.
+.IP 2. 4
+\fBWertbestätigung\fR: der vorgeschlagene kWh\-Wert ist immer editierbar.
+.IP 3. 4
+\fB2FA\fR: ein 6\-stelliger Code wird per
+.B himalaya
+an \fIcommit_email\fR geschickt und muss eingegeben werden.
+.SH EINHEITEN
+Die API liefert Rohwerte; intern umgerechnet (empirisch bestätigt):
+Leistung in Milliwatt (Watt = roh / 1000), Energie in 10^\-10 kWh
+(kWh = roh / 1e10).
+.SH BEISPIELE
+.TP
+Interaktives Dashboard starten:
+.B strom
+.TP
+Momentaufnahme alle 10 s:
+.B strom watch 10
+.TP
+Web\-Seite an einen eigenen Pfad schreiben:
+.B strom export /var/www/strom.php
+.TP
+Per Cron alle 10 Minuten exportieren:
+.EX
+*/10 * * * * /pfad/zu/strom/timed_export.sh >> /pfad/zu/strom/export.log 2>&1
+.EE
+.SH EXIT-STATUS
+.TP
+.B 0
+Erfolg.
+.TP
+.B 1
+Konfigurations\-, Verbindungs\- oder API\-Fehler.
+.SH SIEHE AUCH
+.BR himalaya (1),
+.BR khal (1),
+.BR crontab (5)
+.PP
+inexogy\-API: \fIhttps://api.inexogy.com/docs/\fR \(bu
+Tibber: \fIhttps://developer.tibber.com/\fR
+.SH AUTOR
+Tim Kleiber, mit Claude Code.

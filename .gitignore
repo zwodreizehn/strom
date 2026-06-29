@@ -1,0 +1,15 @@
+# Niemals: Zugangsdaten / Geheimnisse
+config
+tibber_token.json
+*.env
+inexogy-login
+info.txt
+
+# Laufzeit-Artefakte
+export.log
+*.php          # exportierte Seiten (z. B. strom.php)
+strom.php
+
+# Python
+__pycache__/
+*.pyc

@@ -1,0 +1,30 @@
+# strom – Beispielkonfiguration.
+# Kopieren nach ~/.config/strom/config und Werte eintragen (Modus 600!),
+# ODER einfach `strom setup` ausführen und den Assistenten nutzen.
+#   install -m600 config.example ~/.config/strom/config
+
+# — Pflicht: inexogy-Login —
+email=du@example.com
+password=DEIN_INEXOGY_PASSWORT
+
+# — Optional: Stromzähler —
+#meter_id=                 # leer = automatisch ermitteln
+interval=2                 # Sekunden zwischen Live-Abfragen
+chart_height=0             # 0 = automatisch (~90 % Restplatz)
+
+# — Optional: Whitelabel —
+#brand=IBM 3270 ▐ STROM    # Label oben links in der Statusleiste
+
+# — Optional: Tibber-Marktpreise —
+#tibber_token=             # Developer-Token von developer.tibber.com (bevorzugt)
+#tibber_email=du@example.com   # Fallback statt Token (App-Login)
+#tibber_password=
+#tibber_home=              # appNickname-Teil oder Index, sonst erstes Home
+
+# — Optional: Zählerstand an Tibber senden (schreibend, Opt-in) —
+#tibber_commit=on
+#commit_email=du@example.com   # Ziel des 2FA-Codes (Default: email)
+#mail_from=du@example.com      # Absender des 2FA-Codes (Default: commit_email)
+
+# — Optional: Web-Export —
+#export_path=~/strom.php   # Ziel von `strom export` / timed_export.sh
