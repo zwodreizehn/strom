@@ -114,11 +114,19 @@ No-Cache-Header und ein `<meta refresh>` lädt am Handy selbsttätig nach. Ziel 
 `export_path` (oder `$STROM_EXPORT_PATH`) – z. B. ein per sshfs gemounteter
 Webspace.
 
-Nicht-interaktiv und damit cron-tauglich über `timed_export.sh` (prüft optional
-einen Mount, schreibt atomar, loggt):
+Nicht-interaktiv und damit cron-tauglich über `timed_export.sh` (schreibt atomar,
+loggt). Ist `$STROM_EXPORT_PATH` gesetzt und dessen Verzeichnis fehlt, wird sauber
+übersprungen; mit `STROM_EXPORT_MOUNT=1` wird zusätzlich verlangt, dass das
+Zielverzeichnis ein aktiver Mountpoint ist (schützt bei ausgefallenem sshfs davor,
+lokal ins leere Mount-Verzeichnis zu schreiben):
 
 ```sh
+# einfacher Fall: Ziel aus der Konfiguration (export_path)
 */10 * * * * /pfad/zu/strom/timed_export.sh >> /pfad/zu/strom/export.log 2>&1
+
+# gemounteter Webspace, nur schreiben wenn eingehängt:
+*/10 * * * * STROM_EXPORT_PATH=$HOME/webspace/strom.php STROM_EXPORT_MOUNT=1 \
+  /pfad/zu/strom/timed_export.sh >> /pfad/zu/strom/export.log 2>&1
 ```
 
 ## khal-Erinnerung (`strom khal` / TUI **[K]**)

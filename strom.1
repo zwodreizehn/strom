@@ -154,6 +154,10 @@ Commit\-Opt\-in bzw. 2FA\-Ziel.
 .B STROM_EXPORT_PATH
 Zielpfad für \fBstrom export\fR / \fBtimed_export.sh\fR.
 .TP
+.B STROM_EXPORT_MOUNT
+\fB1\fR lässt \fBtimed_export.sh\fR nur schreiben, wenn das Zielverzeichnis ein
+aktiver Mountpoint ist (z. B. sshfs\-Webspace).
+.TP
 .BR STROM_KHAL_CALENDAR ", " STROM_KHAL_REMINDER
 Ziel\-Kalender bzw. Voralarm (Minuten) für \fBstrom khal\fR.
 .TP

@@ -15,10 +15,18 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Liegt das Ziel auf einem Mount (z. B. sshfs-Webspace) und ist dieser nicht
 # eingehängt, lieber sauber aussteigen statt ins leere Verzeichnis zu schreiben.
+# STROM_EXPORT_MOUNT=1 verlangt zusätzlich, dass das Zielverzeichnis ein aktiver
+# Mountpoint ist (schützt davor, bei ausgefallenem sshfs lokal ins leere
+# Mount-Verzeichnis zu schreiben).
 if [ -n "${STROM_EXPORT_PATH:-}" ]; then
   MNT="$(dirname "$STROM_EXPORT_PATH")"
   if [ ! -d "$MNT" ]; then
     echo "$(date '+%F %T') Zielverzeichnis $MNT fehlt (nicht gemountet?) – übersprungen." >&2
+    exit 0
+  fi
+  if [ "${STROM_EXPORT_MOUNT:-0}" = "1" ] && command -v mountpoint >/dev/null 2>&1 \
+       && ! mountpoint -q "$MNT"; then
+    echo "$(date '+%F %T') $MNT ist nicht gemountet – übersprungen." >&2
     exit 0
   fi
 fi
