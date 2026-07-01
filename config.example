@@ -26,5 +26,9 @@ chart_height=0             # 0 = automatisch (~90 % Restplatz)
 #commit_email=du@example.com   # Ziel des 2FA-Codes (Default: email)
 #mail_from=du@example.com      # Absender des 2FA-Codes (Default: commit_email)
 
+# — Optional: khal-Erinnerung (günstiges Verbrauchsfenster) —
+#khal_calendar=            # Ziel-Kalender (leer = khals Standardkalender)
+#khal_reminder=30          # Voralarm in Minuten
+
 # — Optional: Web-Export —
 #export_path=~/strom.php   # Ziel von `strom export` / timed_export.sh

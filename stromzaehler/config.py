@@ -21,6 +21,8 @@ Standard-Konfigdatei ~/.config/strom/config (via $STROM_CONFIG_DIR
     brand=…             # optional – Label oben links (Whitelabel)
     export_path=…       # optional – Ziel von `strom export` (Default ~/strom.php)
     mail_from=…         # optional – Absender des 2FA-Codes (Default: commit_email)
+    khal_calendar=…     # optional – khal-Kalender für Erinnerungen (Default: khals eigener)
+    khal_reminder=30    # optional – Voralarm in Minuten (Default 30)
 
 Die Datei wird beim Schreiben auf Modus 600 gesetzt (nur du lesbar).
 
@@ -35,6 +37,13 @@ CONFIG_FILE = os.path.join(CONFIG_DIR, "config")
 
 class ConfigError(Exception):
     pass
+
+
+def _int(raw, default):
+    try:
+        return max(0, int(str(raw).strip()))
+    except (TypeError, ValueError):
+        return default
 
 
 def _read_file():
@@ -99,6 +108,11 @@ def load():
         "mail_from": (os.environ.get("STROM_MAIL_FROM") or f.get("mail_from")
                       or os.environ.get("STROM_COMMIT_EMAIL")
                       or f.get("commit_email") or email),
+        # khal-Erinnerung (günstiges Fenster) – optional
+        "khal_calendar": (os.environ.get("STROM_KHAL_CALENDAR")
+                          or f.get("khal_calendar") or None),
+        "khal_reminder": _int(os.environ.get("STROM_KHAL_REMINDER")
+                              or f.get("khal_reminder"), 30),
     }
 
 

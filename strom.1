@@ -36,7 +36,7 @@ Markt\-/Preistabelle,
 .B C
 Zählerstand an Tibber senden,
 .B K
-khal\-Infos,
+khal\-Erinnerung anlegen,
 .B Q
 beenden.
 .TP
@@ -48,6 +48,20 @@ Momentaufnahme alle \fISEK\fR Sekunden (Default 5); der Bildschirm wird gelösch
 .TP
 .B strom markt
 Tibber\-Marktpreise für heute als Klartext\-Tabelle.
+.TP
+.BI "strom khal " "[STUNDEN] [\-\-note TEXT] [\-y]"
+Legt das günstigste zusammenhängende Verbrauchsfenster ab jetzt (Default
+1 Stunde, sonst \fISTUNDEN\fR) als Termin mit Voralarm in
+.BR khal (1)
+an. Zeigt vorab den geplanten Termin und fragt nach;
+.B \-y
+(bzw. \fB\-\-yes\fR) überspringt die Rückfrage (für Cron/Skripte, wo keine
+Eingabe möglich ist).
+.B \-\-note
+\fITEXT\fR hängt eine Bemerkung an die Terminbeschreibung. Die UID ist
+tagesstabil, ein erneuter Aufruf am selben Tag aktualisiert denselben Termin
+(cron\-tauglich). Setzt installiertes \fBkhal\fR und konfigurierte Tibber\-Preise
+voraus. Zielkalender und Voralarm über \fIkhal_calendar\fR / \fIkhal_reminder\fR.
 .TP
 .BI "strom export " [PFAD]
 Schreibt eine in sich geschlossene HTML/PHP\-Seite (Leistung, Tagesverbrauch,
@@ -117,6 +131,12 @@ Ziel von \fBstrom export\fR (Default \fI~/strom.php\fR).
 .TP
 .B mail_from
 Absender des 2FA\-Codes für \fBhimalaya\fR (Default: commit_email).
+.TP
+.B khal_calendar
+Ziel\-Kalender für \fBstrom khal\fR (Default: khals eigener Standardkalender).
+.TP
+.B khal_reminder
+Voralarm der khal\-Erinnerung in Minuten (Default 30).
 .SH UMGEBUNGSVARIABLEN
 .TP
 .B STROM_CONFIG_DIR
@@ -133,6 +153,9 @@ Commit\-Opt\-in bzw. 2FA\-Ziel.
 .TP
 .B STROM_EXPORT_PATH
 Zielpfad für \fBstrom export\fR / \fBtimed_export.sh\fR.
+.TP
+.BR STROM_KHAL_CALENDAR ", " STROM_KHAL_REMINDER
+Ziel\-Kalender bzw. Voralarm (Minuten) für \fBstrom khal\fR.
 .TP
 .B STROM_MAIL_FROM
 Absenderadresse des 2FA\-Codes (sonst \fImail_from\fR aus der config,

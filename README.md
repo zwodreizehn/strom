@@ -55,6 +55,7 @@ strom                # interaktives Live-Dashboard (TUI)
 strom now            # einmalige Momentaufnahme (Klartext)
 strom watch [SEK]    # Momentaufnahme alle SEK Sekunden (Default 5)
 strom markt          # Tibber-Marktpreise heute (Klartext-Tabelle)
+strom khal [STD] [--note T] [-y]   # günstiges Fenster als khal-Erinnerung
 strom export [PFAD]  # HTML/PHP-Seite schreiben (Default aus export_path)
 strom commit         # aktuellen Zählerstand an Tibber senden (Opt-in + 2FA)
 strom meters         # alle Zähler des Kontos auflisten
@@ -64,7 +65,7 @@ strom version | help
 ```
 
 In der TUI: **[R]** aktualisieren, **[M]** Markt-/Preistabelle, **[C]**
-Zählerstand an Tibber, **[K]** khal-Infos, **[Q]** beenden. Das Dashboard zeigt
+Zählerstand an Tibber, **[K]** khal-Erinnerung, **[Q]** beenden. Das Dashboard zeigt
 die aktuelle Leistung (Balken), den Verbrauch seit Mitternacht, die Zählerstände
 (Gesamt-Bezug zusätzlich als große 80er-LED-Ziffern), einen 15-Min-Verlauf und –
 wenn Tibber konfiguriert ist – ein **MARKT**-Panel mit aktuellem Preis,
@@ -89,13 +90,16 @@ haben Vorrang. Beispiel siehe [`config.example`](config.example).
 | `tibber_commit` | | `on` schaltet den Zählerstand-Commit frei (Default aus) |
 | `commit_email` | | Ziel des 2FA-Codes (Default: `email`) |
 | `mail_from` | | Absender des 2FA-Codes (Default: `commit_email`) |
+| `khal_calendar` | | Ziel-Kalender für khal-Erinnerungen (Default: khals eigener) |
+| `khal_reminder` | | Voralarm der khal-Erinnerung in Minuten (Default 30) |
 | `export_path` | | Ziel von `strom export` (Default `~/strom.php`) |
 
 Passende Umgebungsvariablen: `STROM_EMAIL`, `STROM_PASSWORD`, `STROM_METER`,
 `STROM_INTERVAL`, `STROM_CHART_HEIGHT`, `STROM_BRAND`, `STROM_TIBBER_TOKEN`,
 `STROM_TIBBER_EMAIL`, `STROM_TIBBER_PASSWORD`, `STROM_TIBBER_HOME`,
 `STROM_TIBBER_COMMIT`, `STROM_COMMIT_EMAIL`, `STROM_MAIL_FROM`,
-`STROM_EXPORT_PATH`, `STROM_CONFIG_DIR`.
+`STROM_KHAL_CALENDAR`, `STROM_KHAL_REMINDER`, `STROM_EXPORT_PATH`,
+`STROM_CONFIG_DIR`.
 
 ## Web-Export für unterwegs (`strom export` / Cron)
 
@@ -116,6 +120,33 @@ einen Mount, schreibt atomar, loggt):
 ```sh
 */10 * * * * /pfad/zu/strom/timed_export.sh >> /pfad/zu/strom/export.log 2>&1
 ```
+
+## khal-Erinnerung (`strom khal` / TUI **[K]**)
+
+Legt das **günstigste zusammenhängende Verbrauchsfenster ab jetzt** (aus den
+Tibber-Preisen, bezieht morgen mit ein, sobald veröffentlicht) als Termin mit
+Voralarm in [khal](https://github.com/pimalaya/khal) an – praktisch, um
+stromintensiven Betrieb in die billige Stunde zu legen.
+
+```sh
+strom khal                       # 1-Stunden-Fenster, mit Rückfrage
+strom khal 2                     # günstigstes 2-Stunden-Fenster
+strom khal --note "Trockner"     # optionale Notiz am Termin
+strom khal -y                    # ohne Rückfrage (für Cron/Skripte)
+```
+
+Vor dem Eintragen zeigt der Befehl den geplanten Termin und fragt nach; `-y`
+(bzw. `--yes`) überspringt die Rückfrage – nötig z. B. im Cron, wo keine
+Eingabe möglich ist. `--note TEXT` hängt eine Bemerkung an die Terminbeschreibung
+(in der TUI über **[N]**).
+
+Der Termin hat eine **tagesstabile UID** (`strom-cheap-<Datum>`): ein erneuter
+Aufruf am selben Tag aktualisiert denselben Termin, statt einen zweiten
+anzulegen – so eignet sich der Befehl auch für einen Cron. Die Datei wird direkt
+in das vdir-Verzeichnis des Zielkalenders geschrieben (aus der khal-Konfiguration
+ermittelt); ist das nicht möglich, greift ersatzweise `khal import`. Zielkalender
+und Voralarm sind über `khal_calendar` / `khal_reminder` konfigurierbar. Setzt
+ein installiertes `khal` und konfigurierte Tibber-Preise voraus.
 
 ## Zählerstand an Tibber senden (`strom commit` / TUI **[C]**)
 
@@ -156,7 +187,7 @@ stromzaehler/
   commit.py  – Zählerstand-Commit mit Opt-in + 2FA
   export.py  – HTML/PHP-Seite mit Empfehlung (Web-Export, cron)
   mail.py    – 2FA-Code-Versand über himalaya
-  khal.py    – Erinnerungs-Export nach khal (Stub, geplant)
+  khal.py    – günstigstes Fenster als khal-Erinnerung exportieren
   theme.py / render.py / tui.py  – Retro-Terminal-UI (Klartext bzw. curses)
   cli.py     – Einstieg / Befehlszeile
 ```

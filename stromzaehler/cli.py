@@ -2,7 +2,7 @@
 """Einstieg: Befehlszeile und Start des Live-Dashboards."""
 import sys
 
-from . import config, api, core, render, markt, brand, wizard
+from . import config, api, core, render, markt, brand, wizard, khal
 from .theme import GH, YW, RD, N, B
 from . import __version__
 
@@ -13,6 +13,7 @@ HELP = f"""\
   strom now            einmalige Momentaufnahme (Klartext)
   strom watch [SEK]    Momentaufnahme alle SEK Sekunden (Default 5)
   strom markt          Tibber-Marktpreise heute (Klartext)
+  strom khal [STD] [--note T] [-y]  günstiges Fenster als khal-Erinnerung
   strom export [PFAD]  HTML/PHP-Seite schreiben (Default aus export_path)
   strom commit         aktuellen Zählerstand an Tibber senden (Opt-in + 2FA)
   strom meters         alle Zähler des Kontos auflisten
@@ -86,6 +87,75 @@ def _commit_cli(client, meter_id, tibber, cfg):
         print(f"{RD}{e}{N}")
 
 
+def _khal_cli(tibber, cfg, argv):
+    """Günstigstes Verbrauchsfenster als khal-Erinnerung anlegen.
+
+    Argumente: [STUNDEN] [--note TEXT] [-y|--yes]. Ohne -y wird vor dem
+    Eintragen zurückgefragt; -y überspringt die Rückfrage (für Cron/Skripte).
+    """
+    if not khal.available():
+        print(f"{RD}khal ist nicht installiert (khal-CLI nicht gefunden).{N}")
+        return
+    if tibber is None:
+        print(f"{RD}Tibber ist nicht konfiguriert – der khal-Export baut auf "
+              f"den Marktpreisen auf.{N}")
+        return
+    hours, note, assume_yes = 1, None, False
+    rest, i = argv[1:], 0
+    while i < len(rest):
+        a = rest[i]
+        if a in ("-y", "--yes", "--ja", "--y"):
+            assume_yes = True
+        elif a == "--note":
+            i += 1
+            note = rest[i] if i < len(rest) else None
+        elif a.startswith("--note="):
+            note = a[len("--note="):] or None
+        elif a.isdigit():
+            hours = max(1, int(a))
+        else:
+            print(f"{YW}Unbekanntes Argument: {a}{N}")
+        i += 1
+
+    ov = tibber.overview()
+    win = ov.cheapest_window(hours)
+    if not win:
+        print(f"{RD}Keine Preisdaten für ein {hours}-Stunden-Fenster.{N}")
+        return
+    start, end, avg = win
+    reminder = cfg.get("khal_reminder", 30)
+    cal = cfg.get("khal_calendar") or "khals Standardkalender"
+    av = f"{avg:.1f}".replace(".", ",")
+
+    print(f"{GH}{B}Folgender Termin wird in khal eingetragen:{N}")
+    print(f"  ⚡ Günstiger Strom · {av} ct/kWh")
+    print(f"  {start:%a %d.%m.}  {start:%H:%M}–{end:%H:%M} Uhr")
+    print(f"  Kalender: {cal}")
+    print(f"  Voralarm: {reminder} min vorher")
+    if note:
+        print(f"  Notiz:    {note}")
+
+    if not assume_yes:
+        if not sys.stdin.isatty():
+            print(f"{RD}Keine Rückfrage möglich (keine Eingabe). "
+                  f"Für Cron/Skripte -y verwenden.{N}")
+            return
+        try:
+            ans = input("Eintragen? (J/n) ").strip().lower()
+        except EOFError:
+            ans = "n"
+        if ans in ("n", "nein", "no"):
+            print("Abgebrochen – nichts eingetragen.")
+            return
+
+    summary = khal.export_window(
+        start, end, avg, reminder_min=reminder,
+        calendar=cfg.get("khal_calendar"), brand=cfg.get("brand") or "STROM",
+        note=note)
+    print(f"{GH}{B}✓ khal-Erinnerung angelegt:{N} {summary} "
+          f"(Voralarm {reminder} min)")
+
+
 def main(argv):
     cmd = argv[0] if argv else None
 
@@ -134,7 +204,8 @@ def main(argv):
                 from . import tui
                 tui.run(client, meter_id, meter, cfg["interval"], tibber,
                         cfg["tibber_commit"], cfg["commit_email"],
-                        cfg["chart_height"])
+                        cfg["chart_height"], cfg.get("khal_calendar"),
+                        cfg.get("khal_reminder", 30))
             else:
                 render.snapshot(client, meter_id, meter)
         elif cmd == "now":
@@ -149,6 +220,8 @@ def main(argv):
             render.watch(client, meter_id, meter, sek)
         elif cmd == "markt":
             render.market(tibber)
+        elif cmd == "khal":
+            _khal_cli(tibber, cfg, argv)
         elif cmd == "export":
             from . import export
             out = argv[1] if len(argv) > 1 else cfg.get("export_path")
@@ -167,6 +240,9 @@ def main(argv):
         sys.exit(1)
     except markt.MarktError as e:
         print(f"{RD}Tibber: {e}{N}")
+        sys.exit(1)
+    except khal.KhalError as e:
+        print(f"{RD}khal: {e}{N}")
         sys.exit(1)
     except KeyboardInterrupt:
         pass

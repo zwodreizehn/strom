@@ -19,13 +19,16 @@ SPIN = "|/-\\"
 
 
 def run(client, meter_id, meter, interval, tibber=None,
-        commit_enabled=False, commit_email=None, chart_height=0):
+        commit_enabled=False, commit_email=None, chart_height=0,
+        khal_calendar=None, khal_reminder=30):
     curses.wrapper(_main, client, meter_id, meter, interval, tibber,
-                   commit_enabled, commit_email, chart_height)
+                   commit_enabled, commit_email, chart_height,
+                   khal_calendar, khal_reminder)
 
 
 def _main(stdscr, client, meter_id, meter, interval, tibber,
-          commit_enabled, commit_email, chart_height):
+          commit_enabled, commit_email, chart_height,
+          khal_calendar, khal_reminder):
     try:
         curses.set_escdelay(25)
     except Exception:
@@ -33,7 +36,8 @@ def _main(stdscr, client, meter_id, meter, interval, tibber,
     curses.curs_set(0)
     theme.setup_colors()
     App(stdscr, client, meter_id, meter, interval, tibber,
-        commit_enabled, commit_email, chart_height).loop()
+        commit_enabled, commit_email, chart_height,
+        khal_calendar, khal_reminder).loop()
 
 
 # Tibber-Preisstufe → Farbpaar
@@ -152,7 +156,8 @@ class Poller(threading.Thread):
 # ── App / Zeichnen ─────────────────────────────────────────────────────────
 class App:
     def __init__(self, scr, client, meter_id, meter, interval, tibber=None,
-                 commit_enabled=False, commit_email=None, chart_height=0):
+                 commit_enabled=False, commit_email=None, chart_height=0,
+                 khal_calendar=None, khal_reminder=30):
         self.scr = scr
         self.client = client
         self.meter_id = meter_id
@@ -162,6 +167,8 @@ class App:
         self.commit_enabled = commit_enabled
         self.commit_email = commit_email
         self.chart_height = chart_height
+        self.khal_calendar = khal_calendar
+        self.khal_reminder = khal_reminder
         self.session = core.Session()
         self.poller = Poller(client, meter_id, self.session, interval, tibber)
         self.scale = 1000.0      # Watt-Vollausschlag der Balken (auto)
@@ -322,14 +329,7 @@ class App:
             elif k == "m":
                 self.market_popup()
             elif k == "k":
-                have = "ja" if khal.available() else "nein (khal nicht gefunden)"
-                self.info_popup("KHAL / Erinnerungs-Export", [
-                    f"khal installiert: {have}",
-                    "",
-                    "Geplant: günstigstes Verbrauchsfenster des Tages als",
-                    "khal-Erinnerung exportieren (baut auf MARKT auf).",
-                    "Code-Haken liegt bereit in stromzaehler/khal.py.",
-                ])
+                self.khal_flow()
             elif k == "c":
                 self.commit_flow()
             elif ch == curses.KEY_RESIZE:
@@ -686,6 +686,97 @@ class App:
             self.scr.get_wch()
         except curses.error:
             pass
+
+    # — Günstiges Fenster → khal-Erinnerung —
+    def khal_flow(self):
+        if not khal.available():
+            self.info_popup("KHAL / Erinnerung", [
+                "khal ist nicht installiert (khal-CLI nicht gefunden).",
+                "",
+                "Siehe https://github.com/pimalaya/khal",
+            ])
+            return
+        if not self.tibber:
+            self.info_popup("KHAL / Erinnerung", [
+                "Tibber ist nicht konfiguriert.",
+                "",
+                "Der khal-Export baut auf den Marktpreisen auf – trage in",
+                "~/.config/strom/config einen tibber_token= (o. Login) ein.",
+            ])
+            return
+        with self.poller.lock:
+            market = self.session.market
+            merr = self.session.market_error
+        if market is None:
+            self.info_popup("KHAL / Erinnerung", [
+                ("⚠ " + merr) if merr else "Marktpreise werden noch geladen –",
+                "kurz warten und erneut [K] drücken (oder [M] öffnen).",
+            ])
+            return
+        win = market.cheapest_window(1)
+        if not win:
+            self.info_popup("KHAL / Erinnerung",
+                            ["Keine Preisdaten für ein Fenster gefunden."])
+            return
+        start, end, avg = win
+        cal = self.khal_calendar or "khals Standardkalender"
+        title = f"⚡ Günstiger Strom · {fmt_ct(avg)}/kWh"
+        note = ""
+
+        def render():
+            self.scr.erase()
+            self._oia_top("·", False)
+            self._hdr(2, "KHAL / Erinnerung")
+            self._put(4, 4, "Folgender Termin wird in khal eingetragen:", P_GREEN)
+            self._put(6, 6, title, P_BRIGHT, bold=True)
+            self._put(7, 6, f"{start:%a %d.%m.}  {start:%H:%M}–{end:%H:%M} Uhr",
+                      P_CYAN, bold=True)
+            self._kv(9, "Kalender", cal)
+            self._kv(10, "Voralarm", f"{self.khal_reminder} min vorher")
+            self._kv(11, "Notiz", note if note else "— (optional)",
+                     vpair=P_BRIGHT if note else P_DIM)
+            h, _ = self.scr.getmaxyx()
+            self._put(h - 1, 1,
+                      "[E] Eintragen · [N] Notiz · [ESC] Abbrechen",
+                      P_YELLOW, bold=True)
+            self.scr.refresh()
+
+        # Bildschirm-Timeout gilt aus der Hauptschleife → get_wch kann durch
+        # Timeout curses.error werfen; dann nur neu zeichnen (nicht verlassen).
+        while True:
+            render()
+            try:
+                ch = self.scr.get_wch()
+            except curses.error:
+                continue
+            if ch == curses.KEY_RESIZE:
+                continue
+            k = ch.lower() if isinstance(ch, str) else ch
+            if k == "n":
+                res = self._prompt(13, "Notiz (Enter=ok, ESC=abbrechen)", note)
+                if res is not None:
+                    note = res
+                continue
+            if k in ("e", "\n", "\r") or ch == curses.KEY_ENTER:
+                break
+            if k in ("\x1b", "q"):
+                return
+            # andere Tasten ignorieren → Schleife zeichnet neu
+
+        try:
+            summary = khal.export_window(
+                start, end, avg, reminder_min=self.khal_reminder,
+                calendar=self.khal_calendar, brand=brand.OIA,
+                note=note or None)
+            lines = ["✓ Erinnerung in khal angelegt:", "",
+                     f"    {summary}",
+                     f"    Voralarm {self.khal_reminder} min vorher",
+                     f"    Kalender: {cal}"]
+            if note:
+                lines.append(f"    Notiz: {note}")
+            self.info_popup("KHAL / Erinnerung", lines)
+        except khal.KhalError as ex:
+            self.info_popup("KHAL / Erinnerung", [f"✗ {ex}"])
 
     # — Popup —
     def info_popup(self, title, lines):

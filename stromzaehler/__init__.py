@@ -14,8 +14,8 @@ Aufbau (Funktion / Inhalt / Oberfläche getrennt):
   commit.py – Funktion: Zählerstand-Commit mit Opt-in + 2FA
   export.py – Funktion: HTML/PHP-Seite mit Empfehlung (Web-Export, cron)
   mail.py   – Funktion: 2FA-Code-Versand über himalaya
-  khal.py   – Funktion: Erinnerungs-Export nach khal (Stub, geplant)
+  khal.py   – Funktion: günstigstes Fenster als khal-Erinnerung exportieren
   theme.py / render.py / tui.py – Retro-Terminal-UI (Klartext bzw. curses)
   cli.py    – Einstieg / Befehlszeile
 """
-__version__ = "2.0.0"
+__version__ = "2.1.0"

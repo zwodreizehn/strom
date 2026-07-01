@@ -9,7 +9,7 @@ Lösung ohne vorbereitete Datei in Betrieb nehmen.
 import getpass
 import sys
 
-from . import config
+from . import config, khal
 from .theme import GH, GD, YW, RD, N, B
 
 
@@ -78,7 +78,20 @@ def run():
             data["mail_from"] = _ask("Absender des 2FA-Codes (himalaya)",
                                      default=data["commit_email"])
 
-    print(f"\n{B}5) Web-Export – optional{N}")
+        if khal.available():
+            print(f"\n{B}5) khal-Erinnerung – optional{N}")
+            print(f"{GD}  Legt das günstigste Verbrauchsfenster als Kalender-"
+                  f"termin an ('strom khal' / TUI [K]).{N}")
+            if _yesno("khal-Erinnerung nutzen?", default=False):
+                cals = khal.calendars()
+                if cals:
+                    print(f"{GD}  Kalender: {', '.join(cals)}{N}")
+                data["khal_calendar"] = _ask(
+                    "Ziel-Kalender (leer = khals Standardkalender)")
+                data["khal_reminder"] = _ask(
+                    "Voralarm in Minuten", default="30")
+
+    print(f"\n{B}6) Web-Export – optional{N}")
     if _yesno("HTML/PHP-Seite per 'strom export' schreiben?", default=False):
         data["export_path"] = _ask("Zielpfad der Seite", default="~/strom.php")
 
