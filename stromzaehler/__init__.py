@@ -18,4 +18,4 @@ Aufbau (Funktion / Inhalt / Oberfläche getrennt):
   theme.py / render.py / tui.py – Retro-Terminal-UI (Klartext bzw. curses)
   cli.py    – Einstieg / Befehlszeile
 """
-__version__ = "2.1.0"
+__version__ = "2.1.1"

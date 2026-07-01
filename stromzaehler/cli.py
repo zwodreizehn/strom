@@ -186,14 +186,25 @@ def main(argv):
         print("\nAbgebrochen – nichts gespeichert.")
         return
 
+    # Der erste API-Zugriff kann je nach Netz einige Sekunden blockieren –
+    # kurz Rückmeldung geben (nur auf einem TTY), damit der Start nicht stumm
+    # wirkt. Fehler und Strg-C dabei sauber abfangen statt Traceback.
+    _hint = sys.stderr.isatty()
+    if _hint:
+        print("» Verbinde mit inexogy …", file=sys.stderr, flush=True)
     try:
         client, meter_id, meter, cfg, tibber = _setup()
     except config.ConfigError as e:
         print(f"{RD}{e}{N}")
         sys.exit(1)
     except api.ApiError as e:
-        print(f"{RD}Verbindung fehlgeschlagen: {e}{N}")
+        print(f"{RD}Verbindung zur inexogy-API fehlgeschlagen: {e}{N}")
+        print(f"{YW}Das ist meist ein API- oder Netzproblem, nicht deine "
+              f"Konfiguration – bitte später erneut versuchen.{N}")
         sys.exit(1)
+    except KeyboardInterrupt:
+        print("\nAbgebrochen.")
+        sys.exit(130)
     brand.set_label(cfg.get("brand"))
     from . import mail
     mail.set_from(cfg.get("mail_from"))
